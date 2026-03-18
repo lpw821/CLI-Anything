@@ -708,6 +708,8 @@ cli-anything/
 ├── 🧜 mermaid/agent-harness/            # Mermaid Live Editor CLI (10 tests)
 ├── ✨ anygen/agent-harness/             # AnyGen CLI (50 tests)
 ├── 🖼️ comfyui/agent-harness/            # ComfyUI CLI (70 tests)
+├── 🧠 notebooklm/agent-harness/         # NotebookLM CLI (experimental, 21 tests)
+├── 🖼️ comfyui/agent-harness/            # ComfyUI CLI (70 tests)
 └── 🛡️ adguardhome/agent-harness/        # AdGuardHome CLI (36 tests)
 ```
 
