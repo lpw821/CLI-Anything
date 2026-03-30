@@ -52,7 +52,7 @@
       "display_name": "Blender",
       "version": "1.0.0",
       "description": "3D modeling, animation, and rendering via blender --background --python",
-      "requires": "blender",
+      "requires": "blender >= 4.2",
       "homepage": "https://www.blender.org",
       "install_cmd": "pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=blender/agent-harness",
       "entry_point": "cli-anything-blender",
@@ -172,6 +172,20 @@
       "category": "office",
       "contributor": "CLI-Anything-Team",
       "contributor_url": "https://github.com/HKUDS/CLI-Anything"
+    },
+    {
+      "name": "zotero",
+      "display_name": "Zotero",
+      "version": "0.1.0",
+      "description": "Reference management via local Zotero SQLite, connector, and Local API",
+      "requires": "Zotero desktop app",
+      "homepage": "https://www.zotero.org",
+      "install_cmd": "pip install git+https://github.com/HKUDS/CLI-Anything.git#subdirectory=zotero/agent-harness",
+      "entry_point": "cli-anything-zotero",
+      "skill_md": "zotero/agent-harness/cli_anything/zotero/skills/SKILL.md",
+      "category": "office",
+      "contributor": "zhiwuyazhe_fjr",
+      "contributor_url": "https://github.com/zhiwuyazhe_fjr"
     },
     {
       "name": "mubu",
