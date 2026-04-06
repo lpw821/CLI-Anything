@@ -35,7 +35,7 @@ CloudAnalyzer is already CLI-first, but this harness adds:
 - **REPL mode** for interactive exploration
 - **Project/session management** with operation history and undo
 - **SKILL.md** for agent auto-discovery via CLI-Anything ecosystem
-- **Unified Click interface** grouping 32 commands into logical groups
+- **Unified Click interface** grouping 27 commands into logical groups
 
 ## Commands
 
@@ -50,7 +50,7 @@ See [SKILL.md](cli_anything/cloudanalyzer/skills/SKILL.md) for the full command 
 | process | 6 | Downsample, split, filter, merge, convert |
 | inspect | 3 | Visualization and browser inspection |
 | info | 2 | Metadata and version |
-| session | 3 | Project and session management |
+| session | 2 | Project and session management |
 
 ## Requirements
 

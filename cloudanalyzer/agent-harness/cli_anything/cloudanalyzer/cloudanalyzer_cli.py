@@ -191,8 +191,9 @@ def evaluate_ground(
 def evaluate_batch(ctx: click.Context, directory: str, reference: str, min_auc: Optional[float], max_chamfer: Optional[float]) -> None:
     """Batch evaluation of multiple point clouds."""
     try:
-        from ca.batch import batch_evaluate
-        result = batch_evaluate(directory, reference, min_auc=min_auc, max_chamfer=max_chamfer)
+        result = ca_backend.batch_evaluate(
+            directory, reference, min_auc=min_auc, max_chamfer=max_chamfer,
+        )
         _out(ctx, result)
     except Exception as e:
         _error(str(e), ctx.obj.get("json", False))
@@ -204,13 +205,19 @@ def evaluate_batch(ctx: click.Context, directory: str, reference: str, min_auc: 
 @click.argument("reference")
 @click.option("-o", "--output", required=True)
 @click.option("-v", "--voxel-size", type=float, default=0.05)
-@click.option("--filter/--no-filter", "apply_filter", default=False)
 @click.pass_context
-def evaluate_pipeline(ctx: click.Context, input_path: str, reference: str, output: str, voxel_size: float, apply_filter: bool) -> None:
+def evaluate_pipeline(
+    ctx: click.Context,
+    input_path: str,
+    reference: str,
+    output: str,
+    voxel_size: float,
+) -> None:
     """Filter, downsample, evaluate in one command."""
     try:
-        from ca.pipeline import run_pipeline
-        result = run_pipeline(input_path, reference, output, voxel_size=voxel_size, apply_filter=apply_filter)
+        result = ca_backend.run_pipeline(
+            input_path, reference, output, voxel_size=voxel_size,
+        )
         _out(ctx, result)
     except Exception as e:
         _error(str(e), ctx.obj.get("json", False))
@@ -236,14 +243,34 @@ def trajectory(ctx: click.Context) -> None:
 @click.option("--max-longitudinal", type=float, default=None)
 @click.option("--align-origin", is_flag=True)
 @click.option("--align-rigid", is_flag=True)
-@click.option("--report", default=None, help="Write trajectory report")
 @click.pass_context
 def trajectory_evaluate(
-    ctx: click.Context, estimated: str, reference: str, **kwargs,
+    ctx: click.Context,
+    estimated: str,
+    reference: str,
+    max_ate: Optional[float],
+    max_rpe: Optional[float],
+    max_drift: Optional[float],
+    min_coverage: Optional[float],
+    max_lateral: Optional[float],
+    max_longitudinal: Optional[float],
+    align_origin: bool,
+    align_rigid: bool,
 ) -> None:
     """Evaluate estimated vs reference trajectory."""
     try:
-        result = ca_backend.evaluate_trajectory(estimated, reference, **kwargs)
+        result = ca_backend.evaluate_trajectory(
+            estimated,
+            reference,
+            max_ate=max_ate,
+            max_rpe=max_rpe,
+            max_drift=max_drift,
+            min_coverage=min_coverage,
+            max_lateral=max_lateral,
+            max_longitudinal=max_longitudinal,
+            align_origin=align_origin,
+            align_rigid=align_rigid,
+        )
         _out(ctx, result)
         gate = result.get("quality_gate")
         if gate and not gate["passed"]:
@@ -261,11 +288,25 @@ def trajectory_evaluate(
 @click.option("--max-drift", type=float, default=None)
 @click.option("--min-coverage", type=float, default=None)
 @click.pass_context
-def trajectory_batch(ctx: click.Context, directory: str, reference_dir: str, **kwargs) -> None:
+def trajectory_batch(
+    ctx: click.Context,
+    directory: str,
+    reference_dir: str,
+    max_ate: Optional[float],
+    max_rpe: Optional[float],
+    max_drift: Optional[float],
+    min_coverage: Optional[float],
+) -> None:
     """Batch trajectory evaluation."""
     try:
-        from ca.batch import trajectory_batch_evaluate
-        result = trajectory_batch_evaluate(directory, reference_dir, **kwargs)
+        result = ca_backend.trajectory_batch_evaluate(
+            directory,
+            reference_dir,
+            max_ate=max_ate,
+            max_rpe=max_rpe,
+            max_drift=max_drift,
+            min_coverage=min_coverage,
+        )
         _out(ctx, result)
     except Exception as e:
         _error(str(e), ctx.obj.get("json", False))
@@ -279,13 +320,26 @@ def trajectory_batch(ctx: click.Context, directory: str, reference_dir: str, **k
 @click.argument("trajectory_reference")
 @click.option("--min-auc", type=float, default=None)
 @click.option("--max-ate", type=float, default=None)
-@click.option("--report", default=None)
 @click.pass_context
-def trajectory_run_evaluate(ctx: click.Context, map_path: str, map_reference: str, trajectory_path: str, trajectory_reference: str, **kwargs) -> None:
+def trajectory_run_evaluate(
+    ctx: click.Context,
+    map_path: str,
+    map_reference: str,
+    trajectory_path: str,
+    trajectory_reference: str,
+    min_auc: Optional[float],
+    max_ate: Optional[float],
+) -> None:
     """Integrated map + trajectory evaluation."""
     try:
-        from ca.run_evaluate import run_evaluate
-        result = run_evaluate(map_path, map_reference, trajectory_path, trajectory_reference, **kwargs)
+        result = ca_backend.evaluate_run(
+            map_path,
+            map_reference,
+            trajectory_path,
+            trajectory_reference,
+            min_auc=min_auc,
+            max_ate=max_ate,
+        )
         _out(ctx, result)
     except Exception as e:
         _error(str(e), ctx.obj.get("json", False))
@@ -459,8 +513,7 @@ def process_split(ctx: click.Context, input_path: str, output_dir: str, grid_siz
 def process_sample(ctx: click.Context, input_path: str, output: str, num_points: int) -> None:
     """Random point sampling."""
     try:
-        from ca.sample import random_sample
-        result = random_sample(input_path, output, num_points)
+        result = ca_backend.random_sample(input_path, output, num_points)
         _out(ctx, result)
     except Exception as e:
         _error(str(e), ctx.obj.get("json", False))
@@ -476,8 +529,9 @@ def process_sample(ctx: click.Context, input_path: str, output: str, num_points:
 def process_filter(ctx: click.Context, input_path: str, output: str, nb_neighbors: int, std_ratio: float) -> None:
     """Statistical outlier removal."""
     try:
-        from ca.filter import filter_outliers
-        result = filter_outliers(input_path, output, nb_neighbors=nb_neighbors, std_ratio=std_ratio)
+        result = ca_backend.filter_outliers(
+            input_path, output, nb_neighbors=nb_neighbors, std_ratio=std_ratio,
+        )
         _out(ctx, result)
     except Exception as e:
         _error(str(e), ctx.obj.get("json", False))
@@ -491,8 +545,7 @@ def process_filter(ctx: click.Context, input_path: str, output: str, nb_neighbor
 def process_merge(ctx: click.Context, inputs: tuple[str, ...], output: str) -> None:
     """Merge multiple point clouds."""
     try:
-        from ca.merge import merge
-        result = merge(list(inputs), output)
+        result = ca_backend.merge(list(inputs), output)
         _out(ctx, result)
     except Exception as e:
         _error(str(e), ctx.obj.get("json", False))
@@ -506,8 +559,7 @@ def process_merge(ctx: click.Context, inputs: tuple[str, ...], output: str) -> N
 def process_convert(ctx: click.Context, input_path: str, output: str) -> None:
     """Convert between point cloud formats."""
     try:
-        from ca.convert import convert
-        result = convert(input_path, output)
+        result = ca_backend.convert(input_path, output)
         _out(ctx, result)
     except Exception as e:
         _error(str(e), ctx.obj.get("json", False))
@@ -528,8 +580,7 @@ def inspect(ctx: click.Context) -> None:
 def inspect_view(ctx: click.Context, path: str) -> None:
     """Open a point cloud viewer."""
     try:
-        from ca.view import view
-        view(path)
+        ca_backend.view_point_cloud(path)
     except Exception as e:
         _error(str(e), ctx.obj.get("json", False))
         ctx.exit(1)
@@ -545,8 +596,13 @@ def inspect_view(ctx: click.Context, path: str) -> None:
 def inspect_web(ctx: click.Context, source: str, reference: Optional[str], heatmap: bool, trajectory: Optional[str], port: int) -> None:
     """Interactive browser inspection."""
     try:
-        from ca.web import launch_web
-        launch_web(source, reference=reference, heatmap=heatmap, trajectory=trajectory, port=port)
+        ca_backend.web_serve(
+            source,
+            reference,
+            port=port,
+            heatmap=heatmap,
+            trajectory=trajectory,
+        )
     except Exception as e:
         _error(str(e), ctx.obj.get("json", False))
         ctx.exit(1)
@@ -560,8 +616,7 @@ def inspect_web(ctx: click.Context, source: str, reference: Optional[str], heatm
 def inspect_web_export(ctx: click.Context, source: str, reference: Optional[str], output: str) -> None:
     """Export a static HTML inspection bundle."""
     try:
-        from ca.web import export_web
-        result = export_web(source, reference=reference, output_dir=output)
+        result = ca_backend.web_export_bundle(source, reference, output)
         _out(ctx, result)
     except Exception as e:
         _error(str(e), ctx.obj.get("json", False))

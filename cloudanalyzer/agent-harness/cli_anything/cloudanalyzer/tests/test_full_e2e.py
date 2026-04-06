@@ -7,6 +7,13 @@ import pytest
 from click.testing import CliRunner
 
 from cli_anything.cloudanalyzer.cloudanalyzer_cli import cli
+from cli_anything.cloudanalyzer.utils import ca_backend
+
+
+requires_cloudanalyzer = pytest.mark.skipif (
+    not ca_backend.is_available(),
+    reason="CloudAnalyzer (import ca) is not installed",
+)
 
 
 @pytest.fixture
@@ -39,6 +46,7 @@ class TestSessionCommands:
         assert result.exit_code != 0
 
 
+@requires_cloudanalyzer
 class TestCheckCommands:
     def test_init_creates_config(self, runner, tmp_path):
         dest = str(tmp_path / "cloudanalyzer.yaml")
@@ -53,6 +61,7 @@ class TestCheckCommands:
         assert result.exit_code != 0
 
 
+@requires_cloudanalyzer
 class TestBaselineCommands:
     def test_save_and_list(self, runner, tmp_path):
         summary = tmp_path / "summary.json"

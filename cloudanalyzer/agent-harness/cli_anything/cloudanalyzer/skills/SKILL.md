@@ -1,6 +1,6 @@
 ---
 name: "cli-anything-cloudanalyzer"
-description: "Command-line interface for CloudAnalyzer — Agent-friendly harness for CloudAnalyzer, a QA platform for mapping, localization, and perception outputs. Supports 32 commands across 8 groups: point cloud evaluation, trajectory evaluation, ground segmentation QA, config-driven quality gates, baseline evolution, processing, visualization, and interactive REPL."
+description: "Command-line interface for CloudAnalyzer — Agent-friendly harness for CloudAnalyzer, a QA platform for mapping, localization, and perception outputs. Supports 27 commands across 8 groups: point cloud evaluation, trajectory evaluation, ground segmentation QA, config-driven quality gates, baseline evolution, processing, visualization, and interactive REPL."
 ---
 
 # cli-anything-cloudanalyzer
@@ -51,7 +51,7 @@ Compare two point clouds with optional registration.
 cli-anything-cloudanalyzer evaluate compare src.pcd tgt.pcd --register gicp
 ```
 
-Options: `--register TEXT` (icp/gicp/none), `--report TEXT`
+Options: `--register TEXT` (icp/gicp/none)
 
 #### evaluate diff
 Quick distance statistics between two point clouds.
@@ -87,7 +87,7 @@ cli-anything-cloudanalyzer evaluate pipeline input.pcd reference.pcd -o output.p
 
 ---
 
-### 2. trajectory — Trajectory Evaluation (4 commands)
+### 2. trajectory — Trajectory Evaluation (3 commands)
 
 #### trajectory evaluate
 Evaluate estimated vs reference trajectory (ATE, RPE, drift, lateral, longitudinal).
@@ -96,7 +96,7 @@ Evaluate estimated vs reference trajectory (ATE, RPE, drift, lateral, longitudin
 cli-anything-cloudanalyzer --json trajectory evaluate est.csv gt.csv --max-ate 0.5 --max-lateral 0.3
 ```
 
-Options: `--max-ate FLOAT`, `--max-rpe FLOAT`, `--max-drift FLOAT`, `--min-coverage FLOAT`, `--max-lateral FLOAT`, `--max-longitudinal FLOAT`, `--align-origin`, `--align-rigid`, `--report TEXT`
+Options: `--max-ate FLOAT`, `--max-rpe FLOAT`, `--max-drift FLOAT`, `--min-coverage FLOAT`, `--max-lateral FLOAT`, `--max-longitudinal FLOAT`, `--align-origin`, `--align-rigid`
 
 #### trajectory batch
 Batch trajectory evaluation.
@@ -112,12 +112,7 @@ Integrated map + trajectory evaluation.
 cli-anything-cloudanalyzer trajectory run-evaluate map.pcd map_ref.pcd traj.csv traj_ref.csv
 ```
 
-#### trajectory run-batch
-Combined batch QA for map + trajectory.
-
-```bash
-cli-anything-cloudanalyzer trajectory run-batch maps/ --map-reference-dir refs/ --trajectory-dir trajs/ --trajectory-reference-dir traj_refs/
-```
+Options: `--min-auc FLOAT`, `--max-ate FLOAT`
 
 ---
 
@@ -257,9 +252,21 @@ Show CloudAnalyzer version.
 
 ---
 
-### 8. session — Session Management (3 commands)
+### 8. session — Session Management (2 commands)
 
-#### session new / session history / session save
+#### session new
+Create a new harness project JSON file.
+
+```bash
+cli-anything-cloudanalyzer session new -o project.json -n my-run
+```
+
+#### session history
+Show recent operations for the project given with `-p` / `--project`.
+
+```bash
+cli-anything-cloudanalyzer --project project.json session history --last 20
+```
 
 ---
 

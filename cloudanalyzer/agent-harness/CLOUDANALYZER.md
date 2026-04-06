@@ -17,24 +17,30 @@ Since CloudAnalyzer is a Python package, the backend (`ca_backend.py`) imports
 CloudAnalyzer functions directly — no subprocess invocation needed. This makes
 the harness faster and more reliable than subprocess-based approaches.
 
+Call paths go through `ca_backend`: handlers in `cloudanalyzer_cli.py` do not
+import `ca.*` directly.
+
 ## Command Mapping
 
 | Harness Group | CloudAnalyzer Command(s) |
 |---|---|
-| evaluate run | ca evaluate |
-| evaluate compare | ca compare |
-| evaluate diff | ca diff |
-| evaluate ground | ca ground-evaluate |
-| trajectory evaluate | ca traj-evaluate |
-| trajectory batch | ca traj-batch |
-| check run | ca check |
-| check init | ca init-check |
-| baseline decision | ca baseline-decision |
-| baseline save | ca baseline-save |
-| baseline list | ca baseline-list |
-| process downsample | ca downsample |
-| process split | ca split |
-| info show | ca info |
+| evaluate run | ca.evaluate.evaluate |
+| evaluate compare | ca.compare.run_compare |
+| evaluate diff | ca.diff.run_diff |
+| evaluate batch | ca.batch.batch_evaluate |
+| evaluate ground | ca.ground_evaluate.evaluate_ground_segmentation |
+| evaluate pipeline | ca.pipeline.run_pipeline |
+| trajectory evaluate | ca.trajectory.evaluate_trajectory |
+| trajectory batch | ca.batch.trajectory_batch_evaluate |
+| trajectory run-evaluate | ca.run_evaluate.evaluate_run |
+| check run | ca.core.run_check_suite |
+| check init | ca.core.render_check_scaffold |
+| baseline decision | ca.core.summarize_baseline_evolution |
+| baseline save / list | ca.baseline_history.* |
+| process * | ca.downsample / split / sample / filter / merge / convert |
+| inspect view | ca.view.view |
+| inspect web / web-export | ca.web.serve / export_static_bundle |
+| info show | ca.info.get_info |
 
 ## State Model
 
