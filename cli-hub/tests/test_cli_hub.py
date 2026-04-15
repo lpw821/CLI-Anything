@@ -8,9 +8,10 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 import click.testing
+import requests
 
 from cli_hub import __version__
-from cli_hub.registry import fetch_registry, get_cli, search_clis, list_categories
+from cli_hub.registry import fetch_registry, fetch_all_clis, get_cli, search_clis, list_categories
 from cli_hub.installer import install_cli, uninstall_cli, get_installed, _load_installed, _save_installed
 from cli_hub.analytics import _is_enabled, track_event, track_install, track_uninstall as analytics_track_uninstall, track_visit, track_first_run, _detect_is_agent
 from cli_hub.cli import main
@@ -85,41 +86,61 @@ class TestRegistry:
         assert result["clis"][0]["name"] == "gimp"
         mock_get.assert_called_once()
 
-    def test_get_cli_found(self):
-        cli = get_cli("gimp", SAMPLE_REGISTRY)
+    @patch("cli_hub.registry.requests.get", side_effect=requests.ConnectionError("network down"))
+    def test_fetch_registry_uses_cache_on_refresh_failure(self, mock_get, tmp_path):
+        cache_file = tmp_path / "registry_cache.json"
+        cache_payload = {"_cached_at": 0, "data": SAMPLE_REGISTRY}
+        cache_file.write_text(json.dumps(cache_payload, indent=2))
+
+        with patch("cli_hub.registry.CACHE_FILE", cache_file):
+            result = fetch_registry(force_refresh=True)
+
+        assert result["clis"][0]["name"] == "gimp"
+        mock_get.assert_called_once()
+
+    @patch("cli_hub.registry.fetch_all_clis", return_value=SAMPLE_REGISTRY["clis"])
+    def test_get_cli_found(self, mock_fetch):
+        cli = get_cli("gimp")
         assert cli is not None
         assert cli["display_name"] == "GIMP"
 
-    def test_get_cli_case_insensitive(self):
-        cli = get_cli("GIMP", SAMPLE_REGISTRY)
+    @patch("cli_hub.registry.fetch_all_clis", return_value=SAMPLE_REGISTRY["clis"])
+    def test_get_cli_case_insensitive(self, mock_fetch):
+        cli = get_cli("GIMP")
         assert cli is not None
         assert cli["name"] == "gimp"
 
-    def test_get_cli_not_found(self):
-        cli = get_cli("nonexistent", SAMPLE_REGISTRY)
+    @patch("cli_hub.registry.fetch_all_clis", return_value=SAMPLE_REGISTRY["clis"])
+    def test_get_cli_not_found(self, mock_fetch):
+        cli = get_cli("nonexistent")
         assert cli is None
 
-    def test_search_by_name(self):
-        results = search_clis("gimp", SAMPLE_REGISTRY)
+    @patch("cli_hub.registry.fetch_all_clis", return_value=SAMPLE_REGISTRY["clis"])
+    def test_search_by_name(self, mock_fetch):
+        results = search_clis("gimp")
         assert len(results) == 1
         assert results[0]["name"] == "gimp"
 
-    def test_search_by_category(self):
-        results = search_clis("3d", SAMPLE_REGISTRY)
+    @patch("cli_hub.registry.fetch_all_clis", return_value=SAMPLE_REGISTRY["clis"])
+    def test_search_by_category(self, mock_fetch):
+        results = search_clis("3d")
         assert len(results) == 1
         assert results[0]["name"] == "blender"
 
-    def test_search_by_description(self):
-        results = search_clis("audio", SAMPLE_REGISTRY)
+    @patch("cli_hub.registry.fetch_all_clis", return_value=SAMPLE_REGISTRY["clis"])
+    def test_search_by_description(self, mock_fetch):
+        results = search_clis("audio")
         assert len(results) == 1
         assert results[0]["name"] == "audacity"
 
-    def test_search_no_results(self):
-        results = search_clis("nonexistent_xyz", SAMPLE_REGISTRY)
+    @patch("cli_hub.registry.fetch_all_clis", return_value=SAMPLE_REGISTRY["clis"])
+    def test_search_no_results(self, mock_fetch):
+        results = search_clis("nonexistent_xyz")
         assert len(results) == 0
 
-    def test_list_categories(self):
-        cats = list_categories(SAMPLE_REGISTRY)
+    @patch("cli_hub.registry.fetch_all_clis", return_value=SAMPLE_REGISTRY["clis"])
+    def test_list_categories(self, mock_fetch):
+        cats = list_categories()
         assert cats == ["3d", "audio", "image"]
 
 
@@ -179,6 +200,66 @@ class TestInstaller:
         success, msg = uninstall_cli("gimp")
         assert success
         assert "GIMP" in msg
+
+    @patch("cli_hub.installer.subprocess.run")
+    @patch("cli_hub.installer.get_cli")
+    @patch("cli_hub.installer.INSTALLED_FILE", Path(tempfile.mktemp()))
+    def test_install_command_strategy_success(self, mock_get_cli, mock_run):
+        mock_get_cli.return_value = {
+            "name": "onepassword-cli",
+            "display_name": "1Password CLI",
+            "version": "latest",
+            "description": "Secrets automation",
+            "entry_point": "op",
+            "_source": "public",
+            "install_strategy": "command",
+            "package_manager": "brew",
+            "install_cmd": "brew install --cask 1password-cli",
+        }
+        mock_run.return_value = MagicMock(returncode=0, stderr="", stdout="")
+
+        success, msg = install_cli("onepassword-cli")
+        assert success
+        assert "1Password CLI" in msg
+
+    @patch("cli_hub.installer.subprocess.run", side_effect=FileNotFoundError(2, "No such file or directory", "brew"))
+    @patch("cli_hub.installer.get_cli")
+    @patch("cli_hub.installer.INSTALLED_FILE", Path(tempfile.mktemp()))
+    def test_install_command_strategy_missing_executable(self, mock_get_cli, mock_run):
+        mock_get_cli.return_value = {
+            "name": "onepassword-cli",
+            "display_name": "1Password CLI",
+            "version": "latest",
+            "description": "Secrets automation",
+            "entry_point": "op",
+            "_source": "public",
+            "install_strategy": "command",
+            "package_manager": "brew",
+            "install_cmd": "brew install --cask 1password-cli",
+        }
+
+        success, msg = install_cli("onepassword-cli")
+        assert not success
+        assert "Command not found: brew" in msg
+
+    @patch("cli_hub.installer.shutil.which", return_value="/usr/local/bin/obsidian")
+    @patch("cli_hub.installer.get_cli")
+    @patch("cli_hub.installer.INSTALLED_FILE", Path(tempfile.mktemp()))
+    def test_install_bundled_strategy_success_when_detected(self, mock_get_cli, mock_which):
+        mock_get_cli.return_value = {
+            "name": "obsidian-cli",
+            "display_name": "Obsidian CLI",
+            "version": "bundled",
+            "description": "Bundled inside Obsidian",
+            "entry_point": "obsidian",
+            "_source": "public",
+            "install_strategy": "bundled",
+            "package_manager": "bundled",
+        }
+
+        success, msg = install_cli("obsidian-cli")
+        assert success
+        assert "already available" in msg
 
 
 # ─── Analytics tests ──────────────────────────────────────────────────
@@ -342,9 +423,10 @@ class TestCLI:
     @patch("cli_hub.cli.track_first_run")
     @patch("cli_hub.cli.track_visit")
     @patch("cli_hub.cli._detect_is_agent", return_value=False)
-    @patch("cli_hub.cli.fetch_registry", return_value=SAMPLE_REGISTRY)
+    @patch("cli_hub.cli.fetch_all_clis", return_value=SAMPLE_REGISTRY["clis"])
+    @patch("cli_hub.cli.list_categories", return_value=["3d", "audio", "image"])
     @patch("cli_hub.cli.get_installed", return_value={})
-    def test_list_command(self, mock_installed, mock_fetch, mock_detect, mock_visit, mock_first_run):
+    def test_list_command(self, mock_installed, mock_categories, mock_fetch, mock_detect, mock_visit, mock_first_run):
         result = self.runner.invoke(main, ["list"])
         assert "gimp" in result.output
         assert "blender" in result.output
@@ -353,9 +435,10 @@ class TestCLI:
     @patch("cli_hub.cli.track_first_run")
     @patch("cli_hub.cli.track_visit")
     @patch("cli_hub.cli._detect_is_agent", return_value=False)
-    @patch("cli_hub.cli.fetch_registry", return_value=SAMPLE_REGISTRY)
+    @patch("cli_hub.cli.fetch_all_clis", return_value=SAMPLE_REGISTRY["clis"])
+    @patch("cli_hub.cli.list_categories", return_value=["3d", "audio", "image"])
     @patch("cli_hub.cli.get_installed", return_value={})
-    def test_list_with_category(self, mock_installed, mock_fetch, mock_detect, mock_visit, mock_first_run):
+    def test_list_with_category(self, mock_installed, mock_categories, mock_fetch, mock_detect, mock_visit, mock_first_run):
         result = self.runner.invoke(main, ["list", "-c", "image"])
         assert "gimp" in result.output
         assert "blender" not in result.output
